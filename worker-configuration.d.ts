@@ -6,6 +6,7 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./src/index");
 	}
 	interface Env {
+		ASSETS: { fetch: typeof fetch };
 	}
 }
 interface Env extends Cloudflare.Env {}

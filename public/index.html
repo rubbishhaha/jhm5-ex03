@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ultimate Tic-Tac-Toe</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      transition: background 0.5s ease;
+    }
+    body.default-bg {
+      background: #FFEFD5;
+    }
+    body.win-bg {
+      background: #AED6F1;
+    }
+    body.draw-bg {
+      background: #FFFFFF;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+    h1 {
+      color: #D2691E;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      font-size: 2.5em;
+      background: #FFF4E6;
+      color: #C04000;
+      border: 2px solid #E97451;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.3s;
+    }
+    .cell.taken {
+      pointer-events: none;
+    }
+    .cell.animated {
+      animation: popAndSettle 0.25s ease forwards;
+    }
+    @keyframes popAndSettle {
+      0% { transform: scale(1); opacity: 0; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 18px;
+      background: #E97451;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #D2691E;
+    }
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    .modal {
+      background: #FFF8F0;
+      padding: 2em;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .status {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body class="default-bg">
+  <div id="modeSelect" class="overlay">
+    <div class="modal">
+      <h2>Select Game Mode</h2>
+      <button onclick="startGame(1)">🎮 1 Player</button>
+      <button onclick="startGame(2)">👥 2 Players</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>Tic-Tac-Toe</h1>
+    <div class="status" id="status">Choose mode to begin</div>
+    <div class="board" id="board"></div>
+    <div class="buttons">
+      <button onclick="resetGame()">Restart</button>
+      <button onclick="backToMenu()">Menu</button>
+    </div>
+  </div>
+
+  <script>
+    const board = document.getElementById("board");
+    const statusText = document.getElementById("status");
+    const modeSelect = document.getElementById("modeSelect");
+    let cells = [];
+    let gameActive = true;
+    let currentPlayer = "X";
+    let playerMode = 2;
+    let inputLocked = false;
+
+    function startGame(mode) {
+      playerMode = mode;
+      document.body.className = "default-bg";
+      modeSelect.style.display = "none";
+      resetGame();
+    }
+
+    function backToMenu() {
+      modeSelect.style.display = "flex";
+      board.innerHTML = "";
+      statusText.textContent = "Choose mode to begin";
+      document.body.className = "default-bg";
+    }
+
+    function createBoard() {
+      board.innerHTML = "";
+      cells = Array(9).fill("");
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.addEventListener("click", () => handleClick(cell, i));
+        board.appendChild(cell);
+      }
+    }
+
+    function handleClick(cell, index) {
+      if (!gameActive || inputLocked || cells[index] !== "") return;
+
+      makeMove(index, currentPlayer);
+
+      if (checkWin(cells, currentPlayer)) {
+        endGame(`${currentPlayer} wins! 🎉`, "win");
+      } else if (cells.every(c => c)) {
+        endGame("It's a draw!", "draw");
+      } else {
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        statusText.textContent = `Player ${currentPlayer}'s turn`;
+
+        if (playerMode === 1 && currentPlayer === "O") {
+          inputLocked = true;
+          setTimeout(() => {
+            const best = getBestMove();
+            makeMove(best, "O");
+            if (checkWin(cells, "O")) {
+              endGame("O wins! 🤖", "win");
+            } else if (cells.every(c => c)) {
+              endGame("It's a draw!", "draw");
+            } else {
+              currentPlayer = "X";
+              statusText.textContent = `Player ${currentPlayer}'s turn`;
+              inputLocked = false;
+            }
+          }, 300);
+        }
+      }
+    }
+
+    function makeMove(index, player) {
+      cells[index] = player;
+      const cell = board.children[index];
+      cell.textContent = player;
+      cell.classList.add("taken", "animated");
+    }
+
+    function endGame(message, outcome) {
+      gameActive = false;
+      inputLocked = true;
+      statusText.textContent = message;
+      document.body.className = outcome === "win" ? "win-bg" : "draw-bg";
+    }
+
+    function checkWin(board, player) {
+      const combos = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+      ];
+      return combos.some(c => c.every(i => board[i] === player));
+    }
+
+    function getBestMove() {
+      let bestScore = -Infinity;
+      let move = 0;
+      for (let i = 0; i < 9; i++) {
+        if (cells[i] === "") {
+          cells[i] = "O";
+          let score = minimax(cells, 0, false);
+          cells[i] = "";
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      return move;
+    }
+
+    function minimax(board, depth, isMax) {
+      if (checkWin(board, "O")) return 10 - depth;
+      if (checkWin(board, "X")) return depth - 10;
+      if (board.every(c => c)) return 0;
+
+      if (isMax) {
+        let maxEval = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === "") {
+            board[i] = "O";
+            let eval = minimax(board, depth + 1, false);
+            board[i] = "";
+            maxEval = Math.max(maxEval, eval);
+          }
+        }
+        return maxEval;
+      } else {
+        let minEval = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === "") {
+            board[i] = "X";
+            let eval = minimax(board, depth + 1, true);
+            board[i] = "";
+            minEval = Math.min(minEval, eval);
+          }
+        }
+        return minEval;
+      }
+    }
+
+    function resetGame() {
+      gameActive = true;
+      inputLocked = false;
+      currentPlayer = "X";
+      document.body.className = "default-bg";
+      statusText.textContent = `Player ${currentPlayer}'s turn`;
+      createBoard();
+    }
+
+    // Initialize
+    statusText.textContent = "Choose mode to begin";
+  </script>
+</body>
+</html>

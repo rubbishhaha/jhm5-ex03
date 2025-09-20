@@ -13,6 +13,28 @@
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
+		const url = new URL(request.url);
+		const path = url.pathname;
+
+		// Try to serve static files from public directory
+		if (path !== '/') {
+			try {
+				// Remove leading slash and try to get the static asset
+				const asset = await env.ASSETS.fetch(request);
+				return asset;
+			} catch {
+				// If asset is not found, return 404
+				return new Response('Not Found', { status: 404 });
+			}
+		}
+
+		// Serve index.html for root path
+		try {
+			const indexHtml = await env.ASSETS.fetch(new Request('http://localhost/index.html'));
+			return indexHtml;
+		} catch {
+			// Fallback to default response if index.html is not found
+			return new Response('Hello World!');
+		}
 	},
 } satisfies ExportedHandler<Env>;

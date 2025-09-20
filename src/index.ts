@@ -27,14 +27,5 @@ export default {
 				return new Response('Not Found', { status: 404 });
 			}
 		}
-
-		// Serve index.html for root path
-		try {
-			const indexHtml = await env.ASSETS.fetch(new Request('http://localhost/index.html'));
-			return indexHtml;
-		} catch {
-			// Fallback to default response if index.html is not found
-			return new Response('Hello World!');
-		}
 	},
 } satisfies ExportedHandler<Env>;
